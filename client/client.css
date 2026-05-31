@@ -1,0 +1,47 @@
+html{
+    height: 100%;
+    width: 100%;
+    margin-left: 5px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+body{
+    height: 100%;
+    width: 100%;
+    margin-left: 5px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    display: flex;
+    flex-direction: row;
+}
+
+.chatbox{
+    border-style: solid;
+    border-radius: 5px;
+    flex: 1;
+}
+
+#room, #dms{
+    width: 40%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#messages{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+#bottomroom, #bottomdms{
+    display: flex;
+    flex-direction: row;
+}
+
+.sendmessage{
+    flex: 1;
+}

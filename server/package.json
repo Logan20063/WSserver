@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
+    "ws": "^8.21.0"
+  }
+}

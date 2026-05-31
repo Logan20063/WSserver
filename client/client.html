@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="client.css">
+        <title>Duskcord</title>
+    </head>
+    <body>
+        <div id="room">
+            <h3>Current Room: </h3>
+            
+            <div id="toproom">
+                <input id="changename" type="text">
+                <button id="changeNameButton">Change Name</button>
+                <select id="changeroom"></select>
+                <button id="changeRoomButton">Change Room</button>
+            </div>
+
+            <div id="messages" class="chatbox">
+            </div>
+
+            <div id="bottomroom">
+                <input id="messageinput" class="sendmessage" type="text">
+                <button id="messagesend">Send</button>
+            </div>
+        </div>
+
+        <div id="dms">
+            <h3>DMs:</h3>
+            <div id="dmmessages" class="chatbox"></div>
+            <div id="bottomdms">
+                <select id="pickuser"></select>
+                <input id="dminput" class="sendmessage" type="text">
+                <button id="sendDmButton">Send DM</button>
+            </div>
+        </div>
+
+        <div id="users">
+            <h3>Users in room:</h3>
+            <div id="currentusers"></div>
+        </div>
+
+        <script src="client.js"></script>
+    </body>
+</html>
