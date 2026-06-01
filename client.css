@@ -1,25 +1,16 @@
-html{
+html, body{
     height: 100%;
     width: 100%;
     margin-left: 5px;
     margin-top: 0px;
     margin-bottom: 0px;
-}
-
-body{
-    height: 100%;
-    width: 100%;
-    margin-left: 5px;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    display: flex;
-    flex-direction: row;
 }
 
 .chatbox{
     border-style: solid;
     border-radius: 5px;
     flex: 1;
+    margin: 2px;
 }
 
 #room, #dms{
@@ -44,4 +35,11 @@ body{
 
 .sendmessage{
     flex: 1;
+}
+
+#chatroom {
+    display: none;
+    height: 100%;
+    width: 100%;
+    flex-direction: row;
 }

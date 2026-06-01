@@ -26,7 +26,7 @@ server.on("connection", (socket) => {
             }
             if(bannedUsers.has(potentialName)) {
                 socket.send("You have been banned\r\n");
-                socket.destroy();
+                socket.terminate();
             }
             if(potentialName.includes(" ")) {
                 socket.send("Name cannot have spaces\r\n");
@@ -69,7 +69,7 @@ server.on("connection", (socket) => {
                         break;
                     case "/quit":
                         socket.send("Goodbye\r\n", () => {
-                            socket.end();
+                            socket.close();
                         });
                         break;
                     case "/changename":
@@ -172,7 +172,7 @@ process.stdin.on("data", (data) => {
                 } else {
                     socket.send("You have been kicked");
                 }
-                socket.destroy();
+                socket.terminate();
                 if(arr[0] === "/ban") {
                     bannedUsers.add(arr[1]);
                 }
@@ -185,7 +185,7 @@ process.stdin.on("data", (data) => {
         console.log(getTime() + "Closing the server")
         for(const socket of sockets) {
             socket.send("Server Closed", () => {
-                socket.end();
+                socket.close();
             })
         }
         process.stdin.pause();
