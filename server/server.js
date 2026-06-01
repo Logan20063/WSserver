@@ -5,7 +5,9 @@ const sockets = new Set();
 const bannedUsers = new Set();
 const rooms = ["A", "B", "C", "D"];
 
-const server = new WebSocketServer({ port: 8000, host: "0.0.0.0"});
+const server = new WebSocketServer({ port: 8000, host: "0.0.0.0"}, () => {
+    console.log(getTime() + "Server Started");
+});
 
 server.on("connection", (socket) => {
     console.log(getTime() + "User Connected")
@@ -15,123 +17,93 @@ server.on("connection", (socket) => {
     socket.name = undefined;
     socket.room = undefined;
 
-    socket.send("Pick a username:\r\n")
+    socket.send(JSON.stringify({type: "message", body: "Pick a username:\r\n"}));
 
     socket.on("message", (data) => {
-        if(socket.name == undefined){
-            let potentialName = data.toString().trim()
-            if(potentialName == "") {
-                socket.send("You Must Pick A Name\r\n");
-                return;
-            }
-            if(bannedUsers.has(potentialName)) {
-                socket.send("You have been banned\r\n");
-                socket.terminate();
-            }
-            if(potentialName.includes(" ")) {
-                socket.send("Name cannot have spaces\r\n");
-                return;
-            }
-            let user = findUser(potentialName);
-            if(user != undefined) {
-                socket.send("Username already in use\r\n");
-                return;
-            }
-            //Setting Name
-            socket.name = data.toString().trim();
-            console.log(getTime() + socket.name + " Joined");
-            socket.send("Pick a room\r\n");
-            socket.send("Available Rooms are:" + listRooms() + "\r\n");
-        } else if(socket.room == undefined) {
-            if(rooms.includes(data.toString().trim())) {
-                socket.room = data.toString().trim()
-                socket.send("Welcome " + socket.name + "\r\n");
-                console.log(getTime() + socket.name, "joined room", socket.room);
-            } else {
-                socket.send("Invalid Room\r\n")
-            }
-        } else {
-            data =  data.toString().trim()
-            
-            //Commands
-            if(data.charAt(0) == '/')
-            {
-                const args = data.split(' ');
+        data = JSON.parse(data.toString())
 
-                switch(args[0]) {
-                    case "/users":
-                        console.log(getTime() + socket.name + " Checked Room Users")
-                        socket.send(users(socket.room) + "\r\n");
-                        break;
-                    case "/allusers":
-                        console.log(getTime() + socket.name + " Checked Users")
-                        socket.send(users() + "\r\n");
-                        break;
-                    case "/quit":
-                        socket.send("Goodbye\r\n", () => {
-                            socket.close();
-                        });
-                        break;
-                    case "/changename":
-                        if(args.size == 1) {
-                            socket.send("You must pick a new name\r\n");
-                        } else {
-                            if(bannedUsers.has(args[1])) {
-                                socket.send("Invalid Name\r\n");
-                                break;
-                            }
-                            let validUser = findUser(args[1]);
-                            if(validUser != undefined) {
-                                socket.send("Invalid Name\r\n");
-                            } else {
-                                socket.send("Name Sucesfully Changed\r\n");
-                                console.log(getTime() + socket.name + " Changed names to " + args[1]);
-                                socket.name = args[1];
-                            }
-                        }
-                        break;
-                    case "/dm":
-                        if(args.size < 3) {
-                            socket.send("You need a message and user\r\n");
-                            break;
-                        }
-                        let user = findUser(args[1]);
-                        if(user == undefined) {
-                            socket.send("User Doesn't Exist");
-                            break;
-                        }
-                        let message = parseArray(args);
-                        user.send("<Private>" + socket.name + ":" + message + "\r\n");
-                        console.log(getTime() + socket.name + "(To " + args[1] + "):" + message);
-                        break;
-                    case "/changeroom":
-                        if(args.size == 1) {
-                            socket.send("You must add a room to join\r\n");
-                        } else if(rooms.includes(args[1])) {
-                            socket.room = args[1];
-                            console.log(socket.name, "moved to", socket.room);
-                            socket.send("You moved to " + socket.room + "\r\n");
-                        } else {
-                            socket.send("You must move to a valid room\r\n");
-                            socket.send("Available Rooms are:" + listRooms() + "\r\n");
-                        }
-                        break;
-                    default:
-                        socket.send("Unknown Command: " + args[0] + "\r\n");
-                }  
+        if(data.type == "message") {
+            if(socket.name == undefined) {
+                socket.send(JSON.stringify({type: "message", body: "You must pick a name before chatting\r\n"}));
                 return;
             }
-
-            //Regular Messages
-            let text = socket.name + ":" + data;
+            if(socket.room == undefined) {
+                socket.send(JSON.stringify({type: "message", body: "You must pick a room before chatting\r\n"}));
+                return;
+            }
+            data = data.body.trim()
+            let text = socket.name + ": " + data;
             console.log(getTime() + "[" + socket.room + "]" + text);
             sockets.forEach((endingSocket) => {
                 if(socket.room == endingSocket.room) {
-                    endingSocket.send(text + "\r\n");
+                    endingSocket.send(JSON.stringify({type: "message", body: text + "\r\n"}));
                 }
             })
-            //Server Ack(Too much clutter rn)
-            //socket.send("The server has recieved and sent out the message\r\n");
+            return;
+        } else if(data.type == "dm") {
+            let user = findUser(data.user);
+            if(user == undefined) {
+                socket.send(JSON.stringify({type: "dm", body: "User Doesn't Exist"}));
+                return;
+            }
+            user.send(JSON.stringify({type: "dm", body: socket.name + ": " + data.body.trim() + "\r\n"}));
+            console.log(getTime() + socket.name + "(To " + data.user + "):" + data.body.trim());
+            return;
+        } else if(data.type == "command") {
+            switch(data.command) {
+                case "changename":
+                    let potentialName = data.params[0];
+                    if(potentialName == "") {
+                        socket.send(JSON.stringify({type: "message", body: "You Must Pick A Name\r\n"}));
+                        return;
+                    }
+                    if(bannedUsers.has(potentialName)) {
+                        socket.send(JSON.stringify({type: "message", body: "You have been banned\r\n"}));
+                        socket.terminate();
+                    }
+                    if(potentialName.includes(" ")) {
+                        socket.send(JSON.stringify({type: "message", body: "Name cannot have spaces\r\n"}));
+                        return;
+                    }
+                    let user = findUser(potentialName);
+                    if(user != undefined) {
+                        socket.send(JSON.stringify({type: "message", body: "Username already in use\r\n"}));
+                        return;
+                    }
+                    if(socket.name == undefined) {
+                        socket.name = potentialName;
+                        console.log(getTime() + socket.name + " Joined");
+                        socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name}));
+                    } else {
+                        socket.send(JSON.stringify({type: "message", body: "Name Sucesfully Changed\r\n"}));
+                        console.log(getTime() + socket.name + " Changed names to " + potentialName);
+                        socket.name = potentialName;
+                    }                
+                    break;
+                case "changeroom":
+                    if(rooms.includes(data.params[0])) {
+                        socket.room = data.params[0]
+                        socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
+                        console.log(getTime() + socket.name, "joined room", socket.room);
+                    } else {
+                        socket.send(JSON.stringify({type: "message", body: "Invalid Room\r\n"}))
+                    }
+                    break;
+                case "users":
+                    socket.send(JSON.stringify({type: "users", many: "room", users: users(socket.room)}));
+                    break;
+                case "allusers":
+                    socket.send(JSON.stringify({type: "users", many: "all", users: users()}));
+                    break;
+                case "quit":
+                    socket.send(JSON.stringify({type: "message", body: "Goodbye\r\n"}), () => {
+                        socket.close();
+                    });
+                    break;
+                case "allrooms":
+                    socket.send(JSON.stringify({type: "users", many: "rooms", users: listRooms()}));
+                    break;
+            }
         }
     });
 
@@ -168,9 +140,9 @@ process.stdin.on("data", (data) => {
             if(socket.name === arr[1]) {
                 if(arr[0] === "/ban") {
                     bannedUsers.add(arr[1]);
-                    socket.send("You have been banned");
+                    socket.send(JSON.stringify({type: "message", body: "You have been banned"}));
                 } else {
-                    socket.send("You have been kicked");
+                    socket.send(JSON.stringify({type: "message", body: "You have been kicked"}));
                 }
                 socket.terminate();
                 if(arr[0] === "/ban") {
@@ -184,7 +156,7 @@ process.stdin.on("data", (data) => {
     } else if(arr[0] == "/close") {
         console.log(getTime() + "Closing the server")
         for(const socket of sockets) {
-            socket.send("Server Closed", () => {
+            socket.send(JSON.stringify({type: "message", body: "Server Closed"}), () => {
                 socket.close();
             })
         }
@@ -195,22 +167,17 @@ process.stdin.on("data", (data) => {
     const msg = "SERVER: " + data;
 
     sockets.forEach((socket) => {
-        socket.send(msg);
+        socket.send(JSON.stringify({type: "message", body: msg}));
     });
 });
 
 function users(room = undefined) {
-    if(sockets.size == 0) {
-        return "No Online Users";
-    }
-    let ret = "Current Users: ";
+    let ret = [];
     sockets.forEach((socket) => {
         if(room == undefined || socket.room == room) {
-            ret += socket.name;
-            ret += ", ";
+            ret.push(socket.name);
         }
     })
-    ret = ret.slice(0,-2);
     return ret;
 }
 
@@ -239,11 +206,9 @@ function parseArray(arr) {
 }
 
 function listRooms() {
-    let text = "";
+    let text = [];
     for(let i=0; i < rooms.length; i++) {
-        text += rooms[i];
-        text += ", ";
+        text.push(rooms[i]);
     }
-    text = text.slice(0, -2);
     return text;
 }

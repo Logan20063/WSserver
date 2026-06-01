@@ -1,4 +1,5 @@
-let ws;
+let ws = undefined;
+let getUsers = undefined;
 //const ws = new WebSocket("wss://purchase-camping-arts-exports.trycloudflare.com");
 
 const startdiv = document.getElementById("entry");
@@ -10,8 +11,23 @@ const messages = document.getElementById("messages");
 const messageinput = document.getElementById("messageinput");
 const messagesend = document.getElementById("messagesend");
 
+const dms = document.getElementById("dmmessages");
+
+const roomUsers = document.getElementById("currentusers");
+const allUsers = document.getElementById("pickuser");
+
+const usernameInput = document.getElementById("changename");
+const usernameButton = document.getElementById("changeNameButton");
+
+const roomInput = document.getElementById("changeroom");
+const roomButton = document.getElementById("changeRoomButton");
+
+const dmtext = document.getElementById("dminput");
+const dmbutton = document.getElementById("sendDmButton");
+
 messagesend.onclick = () => {
-    ws.send(messageinput.value);
+    const sendmessage = {type: "message", body: messageinput.value};
+    ws.send(JSON.stringify(sendmessage));
     messageinput.value = "";
 };
 
@@ -21,16 +37,61 @@ messageinput.addEventListener("keydown", (e) => {
     }
 });
 
+usernameButton.onclick = () => {
+    ws.send(JSON.stringify({type: "command", command: "changename", params: [usernameInput.value]}));
+}
+
+roomButton.onclick = () => {
+    ws.send(JSON.stringify({type: "command", command: "changeroom", params: [roomInput.value]}));
+}
+
+dmbutton.onclick = () => {
+    ws.send(JSON.stringify({type: "dm", user: allUsers.value, body: dmtext.value}));
+}
+
 connect.onclick = () => {
     ws = new WebSocket(website.value);
 
     ws.onopen = () => {
+        ws.send(JSON.stringify({type: "command", command: "allrooms"}));
         startdiv.style.display = "none";
         enddiv.style.display = "flex";
         messages.innerHTML += `<div>Connected To Server</div>`
+        getUsers = setInterval(() => {
+            ws.send(JSON.stringify({type: "command", command: "users"}));
+            ws.send(JSON.stringify({type: "command", command: "allusers"}));
+        }, 5000)
     };
 
     ws.onmessage = (event) => {
-        messages.innerHTML += `<div>${event.data}</div>`;
+        const packet = JSON.parse(event.data);
+        if(packet.type == "message") {
+            messages.innerHTML += `<div>${packet.body}</div>`;
+            //messages.scrollTop = messages.scrollHeight;
+        } else if(packet.type == "dm") {
+            dms.innerHTML += `<div>${packet.body}</div>`;
+        } else if(packet.type == "users") {
+            if(packet.many == "all") {
+                allUsers.innerHTML = "";
+                for(const user of packet.users) {
+                    allUsers.innerHTML += "<option value=\"" + user + "\">" + user + "</option>"
+                }
+            } else if(packet.many == "room") {
+                roomUsers.innerHTML = "";
+                for(const user of packet.users) {
+                    roomUsers.innerHTML += "<div>" + user + "</div>";
+                }
+            } else if(packet.many == "rooms") {
+                roomInput.innerHTML = "";
+                for(const room of packet.users) {
+                    roomInput.innerHTML += "<option value=\"" + room + "\">" + room + "</option>"
+                }
+            }
+        }
     };
+
+    ws.onclose = (event) => {
+        clearInterval(getUsers);
+        messages.innerHTML += "<div>Disconnected From Server</div>";
+    }
 }
