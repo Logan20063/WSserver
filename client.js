@@ -72,7 +72,6 @@ connect.onclick = () => {
             //messages.scrollTop = messages.scrollHeight;
         } else if(packet.type == "dm") {
             dms.innerHTML += `<div>${packet.body}</div>`;
-            console.log(packet);
         } else if(packet.type == "users") {
             if(packet.many == "all") {
                 allUsers.innerHTML = "";
