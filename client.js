@@ -27,10 +27,14 @@ const dmbutton = document.getElementById("sendDmButton");
 
 const currentroom = document.getElementById("currentroom");
 
+const quit = document.getElementById("quit");
+
 messagesend.onclick = () => {
-    const sendmessage = {type: "message", body: messageinput.value};
-    ws.send(JSON.stringify(sendmessage));
-    messageinput.value = "";
+    if(messageinput.value.trim() != "") {
+        const sendmessage = {type: "message", body: messageinput.value};
+        ws.send(JSON.stringify(sendmessage));
+        messageinput.value = "";
+    }
 };
 
 messageinput.addEventListener("keydown", (e) => {
@@ -43,12 +47,32 @@ usernameButton.onclick = () => {
     ws.send(JSON.stringify({type: "command", command: "changename", params: [usernameInput.value]}));
 }
 
+usernameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        usernameButton.click();
+    }
+});
+
 roomButton.onclick = () => {
     ws.send(JSON.stringify({type: "command", command: "changeroom", params: [roomInput.value]}));
 }
 
 dmbutton.onclick = () => {
-    ws.send(JSON.stringify({type: "dm", user: allUsers.value, body: dmtext.value}));
+    if(dmtext.value.trim() != "") {
+        ws.send(JSON.stringify({type: "dm", user: allUsers.value, body: dmtext.value}));
+        dmtext.value = "";
+    }
+
+}
+
+dmtext.addEventListener("keydown", (e) => {
+    if(e.key === "Enter") {
+        dmbutton.click();
+    }
+});
+
+quit.onclick = () => {
+    ws.send(JSON.stringify({type: "command", command: "quit"}));
 }
 
 connect.onclick = () => {
@@ -68,10 +92,15 @@ connect.onclick = () => {
     ws.onmessage = (event) => {
         const packet = JSON.parse(event.data);
         if(packet.type == "message") {
-            messages.innerHTML += `<div>${packet.body}</div>`;
-            //messages.scrollTop = messages.scrollHeight;
+            const div = document.createElement("div");
+            div.textContent = packet.body;
+            messages.append(div);
+            messages.scrollTop = messages.scrollHeight;
         } else if(packet.type == "dm") {
-            dms.innerHTML += `<div>${packet.body}</div>`;
+            const div = document.createElement("div");
+            div.textContent = packet.body;
+            dms.append(div);
+            dms.scrollTop = dms.scrollHeight;
         } else if(packet.type == "users") {
             if(packet.many == "all") {
                 allUsers.innerHTML = "";

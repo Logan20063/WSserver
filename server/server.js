@@ -47,6 +47,7 @@ server.on("connection", (socket) => {
                 return;
             }
             user.send(JSON.stringify({type: "dm", body: socket.name + ": " + data.body.trim() + "\r\n"}));
+            socket.send(JSON.stringify({type: "dm", body: "(To " + data.user + "): " + data.body.trim() + "\r\n"}));
             console.log(getTime() + socket.name + "(To " + data.user + "):" + data.body.trim());
             return;
         } else if(data.type == "command") {
