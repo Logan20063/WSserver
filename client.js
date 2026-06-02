@@ -25,6 +25,8 @@ const roomButton = document.getElementById("changeRoomButton");
 const dmtext = document.getElementById("dminput");
 const dmbutton = document.getElementById("sendDmButton");
 
+const currentroom = document.getElementById("currentroom");
+
 messagesend.onclick = () => {
     const sendmessage = {type: "message", body: messageinput.value};
     ws.send(JSON.stringify(sendmessage));
@@ -70,6 +72,7 @@ connect.onclick = () => {
             //messages.scrollTop = messages.scrollHeight;
         } else if(packet.type == "dm") {
             dms.innerHTML += `<div>${packet.body}</div>`;
+            console.log(packet);
         } else if(packet.type == "users") {
             if(packet.many == "all") {
                 allUsers.innerHTML = "";
@@ -87,6 +90,10 @@ connect.onclick = () => {
                     roomInput.innerHTML += "<option value=\"" + room + "\">" + room + "</option>"
                 }
             }
+        } else if(packet.type == "room") {
+            currentroom.innerHTML = "Current Room: " + packet.room;
+            messages.innerHTML = "";
+            ws.send(JSON.stringify({type: "command", command: "users"}));
         }
     };
 

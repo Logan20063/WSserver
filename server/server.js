@@ -17,7 +17,7 @@ server.on("connection", (socket) => {
     socket.name = undefined;
     socket.room = undefined;
 
-    socket.send(JSON.stringify({type: "message", body: "Pick a username:\r\n"}));
+    socket.send(JSON.stringify({type: "message", body: "Pick a username and room\r\n"}));
 
     socket.on("message", (data) => {
         data = JSON.parse(data.toString())
@@ -83,6 +83,7 @@ server.on("connection", (socket) => {
                 case "changeroom":
                     if(rooms.includes(data.params[0])) {
                         socket.room = data.params[0]
+                        socket.send(JSON.stringify({type: "room", room: socket.room}));
                         socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
                         console.log(getTime() + socket.name, "joined room", socket.room);
                     } else {
@@ -194,15 +195,6 @@ function findUser(username) {
         }
     })
     return ret
-}
-
-function parseArray(arr) {
-    let text = "";
-    for(let i=2; i < arr.length; i++) {
-        text += arr[i];
-        text += " ";
-    }
-    return text.slice(0, -1);
 }
 
 function listRooms() {
