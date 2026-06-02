@@ -79,13 +79,17 @@ server.on("connection", (socket) => {
                         socket.send(JSON.stringify({type: "message", body: "Name Sucesfully Changed\r\n"}));
                         console.log(getTime() + socket.name + " Changed names to " + potentialName);
                         socket.name = potentialName;
-                    }                
+                    }   
+                    broadcast(JSON.stringify({type: "users", many: "all", users: users()}));             
                     break;
                 case "changeroom":
                     if(rooms.includes(data.params[0])) {
                         socket.room = data.params[0]
                         socket.send(JSON.stringify({type: "room", room: socket.room}));
-                        socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
+                        broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}), socket.room);
+                        if(socket.name != undefined) {
+                            socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
+                        }
                         console.log(getTime() + socket.name, "joined room", socket.room);
                     } else {
                         socket.send(JSON.stringify({type: "message", body: "Invalid Room\r\n"}))
@@ -168,15 +172,16 @@ process.stdin.on("data", (data) => {
     }
     const msg = "SERVER: " + data;
 
-    sockets.forEach((socket) => {
-        socket.send(JSON.stringify({type: "message", body: msg}));
-    });
+    // sockets.forEach((socket) => {
+    //     socket.send(JSON.stringify({type: "message", body: msg}));
+    // });
+    broadcast(JSON.stringify({type: "message", body: msg}));
 });
 
 function users(room = undefined) {
     let ret = [];
     sockets.forEach((socket) => {
-        if(room == undefined || socket.room == room) {
+        if((room == undefined || socket.room == room) && socket.name != undefined) {
             ret.push(socket.name);
         }
     })
@@ -204,4 +209,12 @@ function listRooms() {
         text.push(rooms[i]);
     }
     return text;
+}
+
+function broadcast(message, room = undefined) {
+    sockets.forEach((socket) => {
+        if(room == undefined || socket.room == room) {
+            socket.send(message);
+        }
+    });
 }

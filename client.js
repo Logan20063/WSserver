@@ -1,5 +1,5 @@
 let ws = undefined;
-let getUsers = undefined;
+//let getUsers = undefined;
 //const ws = new WebSocket("wss://purchase-camping-arts-exports.trycloudflare.com");
 
 const startdiv = document.getElementById("entry");
@@ -76,17 +76,25 @@ quit.onclick = () => {
 }
 
 connect.onclick = () => {
-    ws = new WebSocket(website.value);
+    try {
+        ws = new WebSocket(website.value);
+    } catch (error) {
+        const entry = document.getElementById("entry");
+        const div = document.createElement("div")
+        div.textContent = website.value + " could not connect";
+        entry.append(div);
+        return;
+    }
 
     ws.onopen = () => {
         ws.send(JSON.stringify({type: "command", command: "allrooms"}));
         startdiv.style.display = "none";
         enddiv.style.display = "flex";
         messages.innerHTML += `<div>Connected To Server</div>`
-        getUsers = setInterval(() => {
-            ws.send(JSON.stringify({type: "command", command: "users"}));
-            ws.send(JSON.stringify({type: "command", command: "allusers"}));
-        }, 5000)
+        // getUsers = setInterval(() => {
+        //     ws.send(JSON.stringify({type: "command", command: "users"}));
+        //     ws.send(JSON.stringify({type: "command", command: "allusers"}));
+        // }, 5000)
     };
 
     ws.onmessage = (event) => {
@@ -125,8 +133,16 @@ connect.onclick = () => {
         }
     };
 
+    ws.onerror = (event) => {
+        const entry = document.getElementById("entry");
+        const div = document.createElement("div")
+        div.textContent = website.value + " could not connect";
+        entry.append(div);
+        return;
+    };
+
     ws.onclose = (event) => {
-        clearInterval(getUsers);
+        //clearInterval(getUsers);
         messages.innerHTML += "<div>Disconnected From Server</div>";
     }
 }
