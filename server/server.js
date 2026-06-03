@@ -145,7 +145,7 @@ server.on("connection", (socket) => {
             userMap.delete(socket.name);
         }
         if(socket.room != undefined) {
-            rooms.get(socket.room).delete(socket);
+            rooms.get(socket.room).delete(socket.name);
         }
         broadcast(JSON.stringify({type: "users", many: "all", users: users()}));
         broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}))
