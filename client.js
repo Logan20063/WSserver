@@ -75,6 +75,12 @@ quit.onclick = () => {
     ws.send(JSON.stringify({type: "command", command: "quit"}));
 }
 
+const early = document.getElementById("earlyentry");
+early.onclick = () => {
+    startdiv.style.display = "none";
+    enddiv.style.display = "flex";
+}
+
 connect.onclick = () => {
     try {
         ws = new WebSocket(website.value);
