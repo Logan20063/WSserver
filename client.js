@@ -111,10 +111,12 @@ connect.onclick = () => {
             dms.scrollTop = dms.scrollHeight;
         } else if(packet.type == "users") {
             if(packet.many == "all") {
+                let oldUser = allUsers.value;
                 allUsers.innerHTML = "";
                 for(const user of packet.users) {
                     allUsers.innerHTML += "<option value=\"" + user + "\">" + user + "</option>"
                 }
+                allUsers.value = oldUser
             } else if(packet.many == "room") {
                 roomUsers.innerHTML = "";
                 for(const user of packet.users) {
@@ -144,5 +146,19 @@ connect.onclick = () => {
     ws.onclose = (event) => {
         //clearInterval(getUsers);
         messages.innerHTML += "<div>Disconnected From Server</div>";
+        setTimeout(() => {
+            startdiv.style.display = "block";
+            enddiv.style.display = "none";
+        }, 10000)
     }
 }
+
+function checkOrientation() {
+    if (window.innerHeight > window.innerWidth) {
+        document.body.innerHTML =
+            "<h1>Please rotate your device to landscape.</h1>";
+    }
+}
+
+window.addEventListener("resize", checkOrientation);
+checkOrientation();

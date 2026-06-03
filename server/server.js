@@ -3,7 +3,8 @@ import { Temporal } from "@js-temporal/polyfill";
 
 const sockets = new Set();
 const bannedUsers = new Set();
-const rooms = ["A", "B", "C", "D"];
+const rooms = new Map();
+const userMap = new Map();
 
 const server = new WebSocketServer({ port: 8000, host: "0.0.0.0"}, () => {
     console.log(getTime() + "Server Started");
@@ -75,18 +76,27 @@ server.on("connection", (socket) => {
                         socket.name = potentialName;
                         console.log(getTime() + socket.name + " Joined");
                         socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name}));
+                        userMap.set(socket.name, socket);
                     } else {
                         socket.send(JSON.stringify({type: "message", body: "Name Sucesfully Changed\r\n"}));
                         console.log(getTime() + socket.name + " Changed names to " + potentialName);
+                        userMap.delete(socket.name);
                         socket.name = potentialName;
+                        userMap.set(socket.name, socket);
                     }   
                     broadcast(JSON.stringify({type: "users", many: "all", users: users()}));             
                     break;
                 case "changeroom":
-                    if(rooms.includes(data.params[0])) {
+                    if(rooms.has(data.params[0])) {
+                        let oldroom = socket.room
                         socket.room = data.params[0]
                         socket.send(JSON.stringify({type: "room", room: socket.room}));
                         broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}), socket.room);
+                        if(oldroom != undefined) {
+                            broadcast(JSON.stringify({type: "users", many: "room", users: users(oldroom)}), oldroom);
+                            rooms.get(oldroom).delete(socket);
+                        }
+                        rooms.get(socket.room).add(socket.name);
                         if(socket.name != undefined) {
                             socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
                         }
@@ -120,6 +130,11 @@ server.on("connection", (socket) => {
     socket.on("close", () => {
         //Deletes user from set
         sockets.delete(socket);
+        if(socket.name != undefined) {
+            userMap.delete(socket.name);
+        }
+        broadcast(JSON.stringify({type: "users", many: "all", users: users()}));
+        broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}))
         console.log(getTime() + socket.name + " Disconnected");
     });
 
@@ -169,6 +184,13 @@ process.stdin.on("data", (data) => {
         process.stdin.pause();
         server.close();
         return;
+    } else if(arr[0] == "/newroom") {
+        if(arr.length != 1) {
+            addRoom(arr[1]);
+            broadcast(JSON.stringify({type: "users", many: "rooms", users: listRooms()}));
+            console.log(getTime() + "Added Room:" + arr[1])
+
+        }
     }
     const msg = "SERVER: " + data;
 
@@ -179,13 +201,17 @@ process.stdin.on("data", (data) => {
 });
 
 function users(room = undefined) {
-    let ret = [];
-    sockets.forEach((socket) => {
-        if((room == undefined || socket.room == room) && socket.name != undefined) {
-            ret.push(socket.name);
-        }
-    })
-    return ret;
+    // let ret = [];
+    // sockets.forEach((socket) => {
+    //     if((room == undefined || socket.room == room) && socket.name != undefined) {
+    //         ret.push(socket.name);
+    //     }
+    // })
+    if(room != undefined) {
+        return [...rooms.get(room)];
+    } else {
+        return [...userMap.keys()];
+    }
 }
 
 function getTime() {
@@ -194,21 +220,15 @@ function getTime() {
 }
 
 function findUser(username) {
-    let ret = undefined;
-    sockets.forEach((user) => {
-        if(user.name === username) {
-            ret = user;
-        }
-    })
-    return ret
+    return userMap.get(username);
 }
 
 function listRooms() {
-    let text = [];
-    for(let i=0; i < rooms.length; i++) {
-        text.push(rooms[i]);
-    }
-    return text;
+    // let text = [];
+    // for(let i=0; i < rooms.length; i++) {
+    //     text.push(rooms[i]);
+    // }
+    return [...rooms.keys()];
 }
 
 function broadcast(message, room = undefined) {
@@ -218,3 +238,12 @@ function broadcast(message, room = undefined) {
         }
     });
 }
+
+function addRoom(roomName) {
+    rooms.set(roomName, new Set());
+}
+
+addRoom("A");
+addRoom("B");
+addRoom("C");
+addRoom("D");
