@@ -189,6 +189,11 @@ connect.onclick = () => {
         setTimeout(() => {
             startdiv.style.display = "block";
             enddiv.style.display = "none";
+            currentroom.innerHTML = "Current Room: ";
+            messages.innerHTML = "";
+            roomUsers.innerHTML = "";
+            allUsers.innerHTML = "";
+            dms.innerHTML = "";
         }, 10000)
     }
 }

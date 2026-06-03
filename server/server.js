@@ -41,11 +41,7 @@ server.on("connection", (socket) => {
             let text = socket.name + ": " + data;
             console.log(getTime() + "[" + socket.room + "]" + text);
             broadcast(JSON.stringify({type: "message", user: socket.name, body: data + "\r\n", color: socket.color}), socket.room);
-            // if(roomHistory.get(socket.room).length >= historyLength) {
-            //     roomHistory.get(socket.room).shift();
-            // }
-            // roomHistory.get(socket.room).push(text);
-            addToHistory(socket, data)
+            addToHistory(socket.name, socket.color, data, socket.room);
             return;
         } else if(data.type == "dm") {
             let user = findUser(data.user);
@@ -74,7 +70,7 @@ server.on("connection", (socket) => {
                         return;
                     }
                     let user = findUser(potentialName);
-                    if(user != undefined) {
+                    if(potentialName == "SERVER" || user != undefined) {
                         socket.send(JSON.stringify({type: "message", body: "Username already in use\r\n"}));
                         return;
                     }
@@ -96,6 +92,9 @@ server.on("connection", (socket) => {
                         }
                         socket.name = potentialName;
                         userMap.set(socket.name, socket);
+                    }
+                    if(socket.room != undefined) {
+                        broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}), socket.room);
                     }   
                     broadcast(JSON.stringify({type: "users", many: "all", users: users()}));             
                     break;
@@ -211,8 +210,23 @@ process.stdin.on("data", (data) => {
             addRoom(arr[1]);
             broadcast(JSON.stringify({type: "users", many: "rooms", users: listRooms()}));
             console.log(getTime() + "Added Room:" + arr[1])
-
         }
+        return;
+    } else if(arr[0] == "/kickunnamed") {
+        let count = 0;
+        for(const socket of sockets) {
+            if(socket.name == undefined) {
+                socket.send(JSON.stringify({type: "message", body: "You have been kicked"}), () => {
+                    socket.close();
+                });
+                count += 1;
+            }
+        }
+        console.log("Kicked " + count + " unnamed users");
+        return;
+    } else if(arr[0] == "/numusers") {
+        console.log(getTime() + sockets.size + " Users Online");
+        return;
     }
     const msg = "SERVER: " + data;
 
@@ -220,6 +234,7 @@ process.stdin.on("data", (data) => {
     //     socket.send(JSON.stringify({type: "message", body: msg}));
     // });
     broadcast(JSON.stringify({type: "message", body: msg}));
+    addToHistoryAllRooms("SERVER", "#000000", data);
 });
 
 function users(room = undefined) {
@@ -271,18 +286,18 @@ addRoom("B");
 addRoom("C");
 addRoom("D");
 
-function addToHistory(socket, message, allRooms = false) {
-    if(!allRooms) {
-        if(roomHistory.get(socket.room).length >= historyLength) {
-            roomHistory.get(socket.room).shift();
+function addToHistoryAllRooms(name, color, message) {
+    for(const room of rooms.keys()) {
+        if(roomHistory.get(room).length >= historyLength) {
+            roomHistory.get(room).shift();
         }
-        roomHistory.get(socket.room).push([socket.name, socket.color, message]);
-    } else {
-        for(const room of rooms.keys()) {
-            if(roomHistory.get(socket.room).length >= historyLength) {
-                roomHistory.get(socket.room).shift();
-            }
-            roomHistory.get(socket.room).push([socket.name, socket.color, message]);
-        }
+        roomHistory.get(room).push([name, color, message]);
     }
+}
+
+function addToHistory(name, color, message, room) {
+    if(roomHistory.get(room).length >= historyLength) {
+            roomHistory.get(room).shift();
+        }
+        roomHistory.get(room).push([name, color, message]);
 }

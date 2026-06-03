@@ -55,3 +55,24 @@ html, body{
 #currentusers {
     flex: 1;
 }
+
+.watermark {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.watermark h1 {
+    margin: 0;
+    white-space: nowrap;
+    font-size: clamp(12px, 3vw, 32px);
+}
+
+.watermark img {
+    width: clamp(24px, 5vw, 64px);
+    height: clamp(24px, 5vw, 64px);
+}
+
+#quit {
+    align-self: flex-start;
+}
