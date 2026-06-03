@@ -5,6 +5,8 @@ const sockets = new Set();
 const bannedUsers = new Set();
 const rooms = new Map();
 const userMap = new Map();
+const roomHistory = new Map();
+let historyLength = 25;
 
 const server = new WebSocketServer({ port: 8000, host: "0.0.0.0"}, () => {
     console.log(getTime() + "Server Started");
@@ -35,11 +37,11 @@ server.on("connection", (socket) => {
             data = data.body.trim()
             let text = socket.name + ": " + data;
             console.log(getTime() + "[" + socket.room + "]" + text);
-            sockets.forEach((endingSocket) => {
-                if(socket.room == endingSocket.room) {
-                    endingSocket.send(JSON.stringify({type: "message", body: text + "\r\n"}));
-                }
-            })
+            broadcast(JSON.stringify({type: "message", body: text + "\r\n"}), socket.room);
+            if(roomHistory.get(socket.room).length >= historyLength) {
+                roomHistory.get(socket.room).shift();
+            }
+            roomHistory.get(socket.room).push(text);
             return;
         } else if(data.type == "dm") {
             let user = findUser(data.user);
@@ -77,10 +79,17 @@ server.on("connection", (socket) => {
                         console.log(getTime() + socket.name + " Joined");
                         socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name}));
                         userMap.set(socket.name, socket);
+                        if(socket.room != undefined) {
+                            rooms.get(socket.room).add(socket.name);
+                        }
                     } else {
                         socket.send(JSON.stringify({type: "message", body: "Name Sucesfully Changed\r\n"}));
                         console.log(getTime() + socket.name + " Changed names to " + potentialName);
                         userMap.delete(socket.name);
+                        if(socket.room != undefined) {
+                            rooms.get(socket.room).delete(socket.name);
+                            rooms.get(socket.room).add(potentialName);
+                        }
                         socket.name = potentialName;
                         userMap.set(socket.name, socket);
                     }   
@@ -91,13 +100,15 @@ server.on("connection", (socket) => {
                         let oldroom = socket.room
                         socket.room = data.params[0]
                         socket.send(JSON.stringify({type: "room", room: socket.room}));
+                        rooms.get(socket.room).add(socket.name);
                         broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}), socket.room);
                         if(oldroom != undefined) {
+                            rooms.get(oldroom).delete(socket.name);
                             broadcast(JSON.stringify({type: "users", many: "room", users: users(oldroom)}), oldroom);
-                            rooms.get(oldroom).delete(socket);
                         }
                         rooms.get(socket.room).add(socket.name);
                         if(socket.name != undefined) {
+                            socket.send(JSON.stringify({type: "users", many: "history", users: roomHistory.get(socket.room)}));
                             socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
                         }
                         console.log(getTime() + socket.name, "joined room", socket.room);
@@ -132,6 +143,9 @@ server.on("connection", (socket) => {
         sockets.delete(socket);
         if(socket.name != undefined) {
             userMap.delete(socket.name);
+        }
+        if(socket.room != undefined) {
+            rooms.get(socket.room).delete(socket);
         }
         broadcast(JSON.stringify({type: "users", many: "all", users: users()}));
         broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}))
@@ -241,6 +255,7 @@ function broadcast(message, room = undefined) {
 
 function addRoom(roomName) {
     rooms.set(roomName, new Set());
+    roomHistory.set(roomName, []);
 }
 
 addRoom("A");

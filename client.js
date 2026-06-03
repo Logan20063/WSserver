@@ -118,6 +118,7 @@ connect.onclick = () => {
                 }
                 allUsers.value = oldUser
             } else if(packet.many == "room") {
+                console.log(packet);
                 roomUsers.innerHTML = "";
                 for(const user of packet.users) {
                     roomUsers.innerHTML += "<div>" + user + "</div>";
@@ -126,6 +127,12 @@ connect.onclick = () => {
                 roomInput.innerHTML = "";
                 for(const room of packet.users) {
                     roomInput.innerHTML += "<option value=\"" + room + "\">" + room + "</option>"
+                }
+            } else if(packet.many == "history") {
+                for(const message of packet.users) {
+                    const div = document.createElement("div");
+                    div.textContent = message;
+                    messages.append(div);
                 }
             }
         } else if(packet.type == "room") {
@@ -153,12 +160,12 @@ connect.onclick = () => {
     }
 }
 
-function checkOrientation() {
-    if (window.innerHeight > window.innerWidth) {
-        document.body.innerHTML =
-            "<h1>Please rotate your device to landscape.</h1>";
-    }
-}
+// function checkOrientation() {
+//     if (window.innerHeight > window.innerWidth) {
+//         document.body.innerHTML =
+//             "<h1>Please rotate your device to landscape.</h1>";
+//     }
+// }
 
-window.addEventListener("resize", checkOrientation);
-checkOrientation();
+// window.addEventListener("resize", checkOrientation);
+// checkOrientation();
