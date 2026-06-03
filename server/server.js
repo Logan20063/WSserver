@@ -5,6 +5,8 @@ const sockets = new Set();
 const bannedUsers = new Set();
 const rooms = new Map();
 const userMap = new Map();
+
+//<room name, [user, color, message]
 const roomHistory = new Map();
 let historyLength = 25;
 
@@ -19,6 +21,7 @@ server.on("connection", (socket) => {
 
     socket.name = undefined;
     socket.room = undefined;
+    socket.color = "#000000";
 
     socket.send(JSON.stringify({type: "message", body: "Pick a username and room\r\n"}));
 
@@ -37,11 +40,12 @@ server.on("connection", (socket) => {
             data = data.body.trim()
             let text = socket.name + ": " + data;
             console.log(getTime() + "[" + socket.room + "]" + text);
-            broadcast(JSON.stringify({type: "message", body: text + "\r\n"}), socket.room);
-            if(roomHistory.get(socket.room).length >= historyLength) {
-                roomHistory.get(socket.room).shift();
-            }
-            roomHistory.get(socket.room).push(text);
+            broadcast(JSON.stringify({type: "message", user: socket.name, body: data + "\r\n", color: socket.color}), socket.room);
+            // if(roomHistory.get(socket.room).length >= historyLength) {
+            //     roomHistory.get(socket.room).shift();
+            // }
+            // roomHistory.get(socket.room).push(text);
+            addToHistory(socket, data)
             return;
         } else if(data.type == "dm") {
             let user = findUser(data.user);
@@ -130,6 +134,10 @@ server.on("connection", (socket) => {
                 case "allrooms":
                     socket.send(JSON.stringify({type: "users", many: "rooms", users: listRooms()}));
                     break;
+                case "changecolor":
+                    socket.color = data.params[0];
+                    console.log(getTime() + socket.name + " Changed colors to " + data.params[0]);
+                    socket.send(JSON.stringify({type: "message", body: "Color Succesfully Changed"}));
             }
         }
     });
@@ -262,3 +270,19 @@ addRoom("A");
 addRoom("B");
 addRoom("C");
 addRoom("D");
+
+function addToHistory(socket, message, allRooms = false) {
+    if(!allRooms) {
+        if(roomHistory.get(socket.room).length >= historyLength) {
+            roomHistory.get(socket.room).shift();
+        }
+        roomHistory.get(socket.room).push([socket.name, socket.color, message]);
+    } else {
+        for(const room of rooms.keys()) {
+            if(roomHistory.get(socket.room).length >= historyLength) {
+                roomHistory.get(socket.room).shift();
+            }
+            roomHistory.get(socket.room).push([socket.name, socket.color, message]);
+        }
+    }
+}

@@ -18,12 +18,12 @@ const allUsers = document.getElementById("pickuser");
 
 const usernameInput = document.getElementById("changename");
 const usernameButton = document.getElementById("changeNameButton");
-
 const roomInput = document.getElementById("changeroom");
 const roomButton = document.getElementById("changeRoomButton");
-
 const dmtext = document.getElementById("dminput");
 const dmbutton = document.getElementById("sendDmButton");
+const colortext = document.getElementById("usercolor");
+const colorbutton = document.getElementById("changeColorButton")
 
 const currentroom = document.getElementById("currentroom");
 
@@ -81,6 +81,10 @@ early.onclick = () => {
     enddiv.style.display = "flex";
 }
 
+colorbutton.onclick = () => {
+    ws.send(JSON.stringify({type: "command", command: "changecolor", params: [colortext.value]}));
+}
+
 connect.onclick = () => {
     try {
         ws = new WebSocket(website.value);
@@ -107,7 +111,20 @@ connect.onclick = () => {
         const packet = JSON.parse(event.data);
         if(packet.type == "message") {
             const div = document.createElement("div");
-            div.textContent = packet.body;
+
+            if(packet.color != undefined) {
+                const name = document.createElement("span");
+                const message = document.createElement("span");
+
+                name.textContent = `${packet.user}: `;
+                name.style.color = packet.color;
+                message.textContent = packet.body;
+
+                div.append(name);
+                div.append(message);
+            } else {
+                div.textContent = packet.body;
+            }
             messages.append(div);
             messages.scrollTop = messages.scrollHeight;
         } else if(packet.type == "dm") {
@@ -135,9 +152,19 @@ connect.onclick = () => {
                     roomInput.innerHTML += "<option value=\"" + room + "\">" + room + "</option>"
                 }
             } else if(packet.many == "history") {
-                for(const message of packet.users) {
+                for(const text of packet.users) {
                     const div = document.createElement("div");
-                    div.textContent = message;
+                    
+                    const name = document.createElement("span");
+                    const message = document.createElement("span");
+
+                    name.textContent = `${text[0]}: `;
+                    name.style.color = text[1];
+                    message.textContent = text[2];
+
+                    div.append(name);
+                    div.append(message);
+
                     messages.append(div);
                 }
             }
