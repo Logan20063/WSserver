@@ -129,7 +129,17 @@ connect.onclick = () => {
             messages.scrollTop = messages.scrollHeight;
         } else if(packet.type == "dm") {
             const div = document.createElement("div");
-            div.textContent = packet.body;
+            const name = document.createElement("span");
+            const message = document.createElement("span");
+            if(packet.direction == "to") {
+                name.textContent = `(To ${packet.user}): `;
+            } else {
+                name.textContent = `From ${packet.user}: `;
+            }
+            name.style.color = packet.color;
+            message.textContent = packet.body;
+            div.append(name);
+            div.append(message);
             dms.append(div);
             dms.scrollTop = dms.scrollHeight;
         } else if(packet.type == "users") {
