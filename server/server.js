@@ -137,6 +137,7 @@ server.on("connection", (socket) => {
                     socket.color = data.params[0];
                     console.log(getTime() + socket.name + " Changed colors to " + data.params[0]);
                     socket.send(JSON.stringify({type: "message", body: "Color Succesfully Changed"}));
+                    broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}), socket.room);
             }
         }
     });
@@ -299,7 +300,7 @@ function users(room = undefined) {
     // })
     if(room != undefined) {
         try {
-            return [...rooms.get(room)].map(socket => socket.name);
+            return [...rooms.get(room)].map(socket => [socket.name, socket.color]);
         } catch (error) {
             console.log(error.message);
             console.log(room);

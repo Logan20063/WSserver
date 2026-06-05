@@ -144,7 +144,10 @@ connect.onclick = () => {
                 console.log(packet);
                 roomUsers.innerHTML = "";
                 for(const user of packet.users) {
-                    roomUsers.innerHTML += "<div>" + user + "</div>";
+                    const div = document.createElement("div");
+                    div.textContent = user[0];
+                    div.style.color = user[1];
+                    roomUsers.append(div);
                 }
             } else if(packet.many == "rooms") {
                 roomInput.innerHTML = "";
