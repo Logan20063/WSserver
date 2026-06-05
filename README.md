@@ -41,7 +41,6 @@ Website: https://logan20063.github.io/WSserver
 Client (HTML/CSS/JS) <-> Quick Cloudflare Tunnel <-> WebSockets <-> Server(JS)
 
 # Future Improvements
-- Username Colors
 - Nicknames
 - Replies
 - Separate DM's/DM History

@@ -80,16 +80,16 @@ server.on("connection", (socket) => {
                         socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name}));
                         userMap.set(socket.name, socket);
                         if(socket.room != undefined) {
-                            rooms.get(socket.room).add(socket.name);
+                            rooms.get(socket.room).add(socket);
                         }
                     } else {
                         socket.send(JSON.stringify({type: "message", body: "Name Sucesfully Changed\r\n"}));
                         console.log(getTime() + socket.name + " Changed names to " + potentialName);
                         userMap.delete(socket.name);
-                        if(socket.room != undefined) {
-                            rooms.get(socket.room).delete(socket.name);
-                            rooms.get(socket.room).add(potentialName);
-                        }
+                        // if(socket.room != undefined) {
+                        //     rooms.get(socket.room).delete(socket);
+                        //     rooms.get(socket.room).add(potentialName);
+                        // }
                         socket.name = potentialName;
                         userMap.set(socket.name, socket);
                     }
@@ -103,13 +103,13 @@ server.on("connection", (socket) => {
                         let oldroom = socket.room
                         socket.room = data.params[0]
                         socket.send(JSON.stringify({type: "room", room: socket.room}));
-                        rooms.get(socket.room).add(socket.name);
+                        rooms.get(socket.room).add(socket);
                         broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}), socket.room);
                         if(oldroom != undefined) {
-                            rooms.get(oldroom).delete(socket.name);
+                            rooms.get(oldroom).delete(socket);
                             broadcast(JSON.stringify({type: "users", many: "room", users: users(oldroom)}), oldroom);
                         }
-                        rooms.get(socket.room).add(socket.name);
+                        //rooms.get(socket.room).add(socket);
                         if(socket.name != undefined) {
                             socket.send(JSON.stringify({type: "users", many: "history", users: roomHistory.get(socket.room)}));
                             socket.send(JSON.stringify({type: "message", body: "Welcome " + socket.name + "\r\n"}))
@@ -152,7 +152,7 @@ server.on("connection", (socket) => {
             userMap.delete(socket.name);
         }
         if(socket.room != undefined) {
-            rooms.get(socket.room).delete(socket.name);
+            rooms.get(socket.room).delete(socket);
         }
         broadcast(JSON.stringify({type: "users", many: "all", users: users()}));
         broadcast(JSON.stringify({type: "users", many: "room", users: users(socket.room)}))
@@ -227,6 +227,59 @@ process.stdin.on("data", (data) => {
     } else if(arr[0] == "/numusers") {
         console.log(getTime() + sockets.size + " Users Online");
         return;
+    } else if(arr[0] == "/deleteroom") {
+        if(arr.length == 1) {
+            console.log("You must give a room to delete");
+            return;
+        }
+        if(rooms.size <= 1) {
+            console.log("Cannot delete the last room");
+            return;
+        }
+        if(rooms.has(arr[1])) {
+            let postSockets = rooms.get(arr[1]);
+            rooms.delete(arr[1]);
+            let newroom = rooms.keys().next().value;
+            postSockets.forEach((socket) => {
+                socket.room = newroom;
+                rooms.get(newroom).add(socket);
+                socket.send(JSON.stringify({type: "room", room: newroom}));
+                socket.send(JSON.stringify({type: "users", many: "history", users: roomHistory.get(newroom)}));
+            })
+            roomHistory.delete(arr[1]);
+            broadcast(JSON.stringify({type: "users", many: "room", users: users(newroom)}), newroom);
+            broadcast(JSON.stringify({type: "users", many: "rooms", users: listRooms()}));
+            console.log(getTime() + "Deleted Room: " + arr[1]);
+            return;
+        }
+        console.log("Room Doesn't Exist");
+        return;
+    } else if(arr[0] == "/changeroom") {
+        if(arr.length < 3) {
+            console.log("Must have two rooms");
+            return;
+        }
+        if(rooms.has(arr[2])) {
+            console.log(arr[2] + " is already a room");
+            return;
+        }
+        if(rooms.has(arr[1])) {
+            rooms.get(arr[1]).forEach((socket) => {
+                socket.room = arr[2];
+                socket.send(JSON.stringify({type: "room", room: arr[2]}));
+            });
+            rooms.set(arr[2], rooms.get(arr[1]));
+            rooms.delete(arr[1]);
+            roomHistory.set(arr[2], roomHistory.get(arr[1]));
+            roomHistory.delete(arr[1]);
+            broadcast(JSON.stringify({type: "users", many: "rooms", users: listRooms()}));
+            //broadcast(JSON.stringify({type: "room", room: arr[2]}), arr[2]);
+            broadcast(JSON.stringify({type: "users", many: "history", users: roomHistory.get(arr[2])}), arr[2]);
+            console.log("Changed " + arr[1] + " To " + arr[2]);
+            return;
+        }
+        console.log(arr[1] + " is not a room");
+        return;
     }
     const msg = "SERVER: " + data;
 
@@ -245,7 +298,14 @@ function users(room = undefined) {
     //     }
     // })
     if(room != undefined) {
-        return [...rooms.get(room)];
+        try {
+            return [...rooms.get(room)].map(socket => socket.name);
+        } catch (error) {
+            console.log(error.message);
+            console.log(room);
+            console.log(rooms.get(room));
+            return [];
+        }
     } else {
         return [...userMap.keys()];
     }
